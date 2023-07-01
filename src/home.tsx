@@ -1,4 +1,5 @@
-import { Button, Select, Upload } from "antd";
+import { Button, Select, Upload, ColorPicker } from "antd";
+import type { Color } from "antd/es/color-picker";
 import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { saveAs } from "file-saver";
@@ -42,6 +43,7 @@ const Home = () => {
 
   const [render, reRender] = useState(1);
   const [bW, bWHandle] = useState(10);
+  const [bC, bCHandle] = useState<string | Color>("#fff");
   const [renderCount, renderCountHandle] = useState(6);
   const [layout, layoutHandle] = useState<"flex-row" | "flex-col">("flex-row");
 
@@ -97,6 +99,8 @@ const Home = () => {
 
   console.log("renderArr ===> ", renderArr);
 
+  console.log("bC ===>", bC);
+
   return (
     <div>
       <div className="fixed left-0 top-0 flex h-14 w-screen items-center justify-center bg-white shadow-2xl">
@@ -138,20 +142,23 @@ const Home = () => {
           下载图片
         </Button>
 
-        <div className="ml-4 mr-4">
-          <span>边框宽度 {bW} </span>
+        <div className="ml-4 mr-4 flex items-center">
+          <span>边框宽度：</span>
           <Button
             icon={<PlusCircleOutlined />}
             onClick={() => {
               bWHandle(bW + 1);
             }}
           />
+          <span className="ml-1 mr-1">{bW}</span>
           <Button
             icon={<MinusCircleOutlined />}
             onClick={() => {
               bWHandle(bW - 1);
             }}
           />
+          <span className="ml-4">边框颜色：</span>
+          <ColorPicker value={bC} onChange={bCHandle} />
         </div>
 
         <div className="ml-4 mr-4">
@@ -178,7 +185,7 @@ const Home = () => {
             value={layout}
             options={[
               { value: "flex-row", label: "横向" },
-              { value: "flex-col", label: "轴向" },
+              { value: "flex-col", label: "纵向" },
             ]}
             onChange={val => {
               layoutHandle(val);
@@ -210,8 +217,10 @@ const Home = () => {
                     style={{
                       padding: `${bW}px`,
                       [layout === "flex-row" ? "height" : "width"]: `100%`,
+                      backgroundColor:
+                        typeof bC === "string" ? bC : bC.toHexString(),
                     }}
-                    className={classNames("box-border bg-white", {
+                    className={classNames("box-border", {
                       "pr-0": layout === "flex-row" && !last,
                       "pb-0": layout === "flex-col" && !last,
                     })}
