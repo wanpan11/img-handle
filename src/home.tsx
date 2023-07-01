@@ -20,14 +20,16 @@ function getRandom(min: number, max: number) {
   return randomWithinRange;
 }
 
-function getImgPreview(ele: HTMLElement) {
-  html2canvas(ele, { scale: 2 }).then(function (canvas) {
-    // const image = new Image();
-    // image.src = canvas.toDataURL("image/png");
-    // document.body.appendChild(image);
+function getImgPreview(ele: HTMLElement, container: HTMLElement) {
+  // debugger;
+  html2canvas(ele, {
+    scale: 2,
+    scrollX: container.scrollWidth,
+    width: ele.scrollWidth,
+  }).then(function (canvas) {
     canvas.toBlob(function (blob) {
       if (blob) {
-        saveAs(blob, "文件名称");
+        saveAs(blob, `${Date.now()}`);
       }
     });
   });
@@ -127,7 +129,10 @@ const Home = () => {
         <Button
           className="ml-4 mr-4"
           onClick={() => {
-            getImgPreview(document.getElementById("canvasEle") as HTMLElement);
+            getImgPreview(
+              document.getElementById("canvasEle") as HTMLElement,
+              document.getElementById("canvasBox") as HTMLElement
+            );
           }}
         >
           下载图片
@@ -183,29 +188,38 @@ const Home = () => {
       </div>
 
       <div
-        className={`flex ${layout} mt-20 overflow-auto bg-black p-11 shadow-2xl`}
-        id="canvasEle"
+        className="mt-20 box-border overflow-auto bg-black p-11 shadow-2xl"
+        id="canvasBox"
       >
-        {init
-          ? renderArr.map((e, i) => {
-              const { file } = imgSource.current[e];
-              const src = URL.createObjectURL(file);
-              const last = renderArr.length - 1 === i;
+        <div
+          id="canvasEle"
+          className={`flex ${layout} ${
+            layout === "flex-col" ? "w-[800px]" : "h-[400px]"
+          }`}
+        >
+          {init
+            ? renderArr.map((e, i) => {
+                const { file } = imgSource.current[e];
+                const src = URL.createObjectURL(file);
+                const last = renderArr.length - 1 === i;
 
-              return (
-                <div key={e}>
+                return (
                   <img
                     src={src}
-                    style={{ padding: `${bW}px` }}
-                    className={classNames("m-auto w-[400px] bg-white", {
+                    key={e}
+                    style={{
+                      padding: `${bW}px`,
+                      [layout === "flex-row" ? "height" : "width"]: `100%`,
+                    }}
+                    className={classNames("box-border bg-white", {
                       "pr-0": layout === "flex-row" && !last,
                       "pb-0": layout === "flex-col" && !last,
                     })}
                   />
-                </div>
-              );
-            })
-          : null}
+                );
+              })
+            : null}
+        </div>
       </div>
     </div>
   );
