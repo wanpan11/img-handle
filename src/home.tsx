@@ -1,6 +1,6 @@
-import { Button, Select, Upload, ColorPicker } from "antd";
-import type { Color } from "antd/es/color-picker";
 import { useRef, useState } from "react";
+import { Button, Select, Upload, ColorPicker, Switch, Input } from "antd";
+import type { Color } from "antd/es/color-picker";
 import html2canvas from "html2canvas";
 import { saveAs } from "file-saver";
 import {
@@ -9,6 +9,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import classNames from "classnames";
+import { imgCountOptions, layoutOptions } from "./config";
 
 function getRandom(min: number, max: number) {
   const floatRandom = Math.random();
@@ -22,12 +23,13 @@ function getRandom(min: number, max: number) {
 }
 
 function getImgPreview(ele: HTMLElement, container: HTMLElement) {
-  // debugger;
-  html2canvas(ele, {
+  const options: any = {
     scale: 2,
     scrollX: container.scrollWidth,
     width: ele.scrollWidth,
-  }).then(function (canvas) {
+  };
+
+  html2canvas(ele, options).then(function (canvas) {
     canvas.toBlob(function (blob) {
       if (blob) {
         saveAs(blob, `${Date.now()}`);
@@ -39,38 +41,15 @@ function getImgPreview(ele: HTMLElement, container: HTMLElement) {
 const Home = () => {
   const imgSource = useRef<any[]>([]);
   const [imgList, imgListHandle] = useState<any[]>([]);
-  const [init, initHandle] = useState(false);
 
   const [render, reRender] = useState(1);
+
   const [bW, bWHandle] = useState(10);
   const [bC, bCHandle] = useState<string | Color>("#fff");
-  const [renderCount, renderCountHandle] = useState(6);
+  const [renderImgCount, renderImgCountHandle] = useState(6);
   const [layout, layoutHandle] = useState<"flex-row" | "flex-col">("flex-row");
-
-  // useEffect(() => {
-  //   const getImg = async () => {
-  //     if (img_list.length) {
-  //       let img = img_list.shift() as string;
-
-  //       while (img) {
-  //         const imgModule: { default: string } = await import(
-  //           "@img/" + img.split("/")[1]
-  //         );
-  //         imgSource.current.push(imgModule.default);
-
-  //         if (img_list.length) {
-  //           img = img_list.shift() as string;
-  //         } else {
-  //           img = "";
-  //         }
-  //       }
-
-  //       initHandle(true);
-  //     }
-  //   };
-
-  //   getImg();
-  // }, []);
+  const [renderText, renderTextHandle] = useState(false);
+  const [text, textHandle] = useState("");
 
   const getRenderIdx = () => {
     const selectIdx: number[] = [];
@@ -79,7 +58,7 @@ const Home = () => {
     const fun = () => {
       if (
         selectIdx.length === imgSource.current.length ||
-        selectIdx.length === renderCount
+        selectIdx.length === renderImgCount
       )
         return;
 
@@ -96,14 +75,14 @@ const Home = () => {
     return selectIdx;
   };
   const renderArr = getRenderIdx();
+  const textRenderIdx = getRandom(0, renderArr.length - 1);
 
   console.log("renderArr ===> ", renderArr);
-
-  console.log("bC ===>", bC);
+  console.log("textRenderIdx ===> ", textRenderIdx);
 
   return (
     <div>
-      <div className="fixed left-0 top-0 flex h-14 w-screen items-center justify-center bg-white shadow-2xl">
+      <div className="fixed left-0 top-0 flex h-14 w-screen items-center bg-white pl-4 shadow-2xl">
         <Upload
           multiple
           className="mr-12"
@@ -114,7 +93,7 @@ const Home = () => {
           }}
           customRequest={data => {
             imgSource.current.push(data);
-            initHandle(true);
+            imgListHandle([...imgList]);
           }}
         >
           <Button icon={<UploadOutlined />}>
@@ -164,17 +143,10 @@ const Home = () => {
         <div className="ml-4 mr-4">
           图片数量：
           <Select
-            value={renderCount}
-            options={[
-              { value: 1, label: "1" },
-              { value: 2, label: "2" },
-              { value: 3, label: "3" },
-              { value: 4, label: "4" },
-              { value: 5, label: "5" },
-              { value: 6, label: "6" },
-            ]}
+            value={renderImgCount}
+            options={imgCountOptions}
             onChange={val => {
-              renderCountHandle(val);
+              renderImgCountHandle(val);
             }}
           />
         </div>
@@ -183,48 +155,72 @@ const Home = () => {
           排列方式：
           <Select
             value={layout}
-            options={[
-              { value: "flex-row", label: "横向" },
-              { value: "flex-col", label: "纵向" },
-            ]}
+            options={layoutOptions}
             onChange={val => {
               layoutHandle(val);
             }}
           />
         </div>
+
+        <div className="inline-flex items-center">
+          <Switch
+            checked={renderText}
+            className="mr-3 w-[100px]"
+            checkedChildren="有文字"
+            unCheckedChildren="无文字"
+            onChange={renderTextHandle}
+          />
+          {renderText ? (
+            <Input
+              value={text}
+              onChange={evn => {
+                textHandle(evn.target.value);
+              }}
+            ></Input>
+          ) : null}
+        </div>
       </div>
 
       <div
-        className="mt-20 box-border overflow-auto bg-black p-11 shadow-2xl"
+        className={`mt-20 box-border inline-flex w-full overflow-auto bg-black pb-10 pt-10 shadow-2xl ${
+          layout === "flex-col" ? "justify-center" : "items-center p-10"
+        }`}
         id="canvasBox"
       >
         <div
           id="canvasEle"
-          className={`flex ${layout} ${
+          className={`inline-flex ${layout} ${
             layout === "flex-col" ? "w-[800px]" : "h-[400px]"
           }`}
         >
-          {init
+          {imgList.length
             ? renderArr.map((e, i) => {
                 const { file } = imgSource.current[e];
                 const src = URL.createObjectURL(file);
                 const last = renderArr.length - 1 === i;
 
                 return (
-                  <img
-                    src={src}
-                    key={e}
-                    style={{
-                      padding: `${bW}px`,
-                      [layout === "flex-row" ? "height" : "width"]: `100%`,
-                      backgroundColor:
-                        typeof bC === "string" ? bC : bC.toHexString(),
-                    }}
-                    className={classNames("box-border", {
-                      "pr-0": layout === "flex-row" && !last,
-                      "pb-0": layout === "flex-col" && !last,
-                    })}
-                  />
+                  <div key={e} className="relative">
+                    <img
+                      src={src}
+                      style={{
+                        padding: `${bW}px`,
+                        [layout === "flex-row" ? "height" : "width"]: `100%`,
+                        backgroundColor:
+                          typeof bC === "string" ? bC : bC.toHexString(),
+                      }}
+                      className={classNames("box-border", {
+                        "pr-0": layout === "flex-row" && !last,
+                        "pb-0": layout === "flex-col" && !last,
+                      })}
+                    />
+
+                    {i === textRenderIdx && text ? (
+                      <div className="absolute bottom-6 right-6 rounded-md bg-black/25 p-2 text-[20px] font-bold text-white">
+                        {text}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })
             : null}
