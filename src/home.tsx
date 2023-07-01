@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, Select, Upload, ColorPicker, Switch, Input } from "antd";
 import type { Color } from "antd/es/color-picker";
 import html2canvas from "html2canvas";
@@ -39,10 +39,7 @@ function getImgPreview(ele: HTMLElement, container: HTMLElement) {
 }
 
 const Home = () => {
-  const imgSource = useRef<any[]>([]);
   const [imgList, imgListHandle] = useState<any[]>([]);
-
-  const [render, reRender] = useState(1);
 
   const [bW, bWHandle] = useState(10);
   const [bC, bCHandle] = useState<string | Color>("#fff");
@@ -50,39 +47,45 @@ const Home = () => {
   const [layout, layoutHandle] = useState<"flex-row" | "flex-col">("flex-row");
   const [renderText, renderTextHandle] = useState(false);
   const [text, textHandle] = useState("");
+  const [textC, textCHandle] = useState<string | Color>("#fff");
 
-  const getRenderIdx = () => {
-    const selectIdx: number[] = [];
-    if (imgSource.current.length === 0) return selectIdx;
+  const renderArr = useMemo(() => {
+    const getRenderIdx = () => {
+      const selectIdx: number[] = [];
+      if (imgList.length === 0) return selectIdx;
 
-    const fun = () => {
-      if (
-        selectIdx.length === imgSource.current.length ||
-        selectIdx.length === renderImgCount
-      )
-        return;
+      const fun = () => {
+        if (
+          selectIdx.length === imgList.length ||
+          selectIdx.length === renderImgCount
+        )
+          return;
 
-      const index = getRandom(0, imgSource.current.length - 1);
-      if (selectIdx.includes(index)) {
-        fun();
-      } else {
-        selectIdx.push(index);
-        fun();
-      }
+        const index = getRandom(0, imgList.length - 1);
+        if (selectIdx.includes(index)) {
+          fun();
+        } else {
+          selectIdx.push(index);
+          fun();
+        }
+      };
+      fun();
+
+      return selectIdx;
     };
-    fun();
+    return getRenderIdx();
+  }, [renderImgCount, imgList]);
 
-    return selectIdx;
-  };
-  const renderArr = getRenderIdx();
-  const textRenderIdx = getRandom(0, renderArr.length - 1);
+  const textRenderIdx = useMemo(() => {
+    return getRandom(0, renderArr.length - 1);
+  }, [renderArr]);
 
   console.log("renderArr ===> ", renderArr);
   console.log("textRenderIdx ===> ", textRenderIdx);
 
   return (
     <div>
-      <div className="fixed left-0 top-0 flex h-14 w-screen items-center bg-white pl-4 shadow-2xl">
+      <div className="fixed left-0 top-0 z-10 flex h-14 w-screen items-center bg-white pl-4 shadow-2xl">
         <Upload
           multiple
           className="mr-12"
@@ -91,19 +94,18 @@ const Home = () => {
           onChange={({ fileList }) => {
             imgListHandle([...fileList]);
           }}
-          customRequest={data => {
-            imgSource.current.push(data);
-            imgListHandle([...imgList]);
+          customRequest={() => {
+            return;
           }}
         >
           <Button icon={<UploadOutlined />}>
-            上传素材 当前存在{imgSource.current.length}
+            上传素材 当前存在{imgList.length}
           </Button>
         </Upload>
 
         <Button
           onClick={() => {
-            reRender(render + 1);
+            imgListHandle([...imgList]);
           }}
         >
           重排
@@ -162,21 +164,30 @@ const Home = () => {
           />
         </div>
 
-        <div className="inline-flex items-center">
+        <div className="flex  items-center">
           <Switch
             checked={renderText}
-            className="mr-3 w-[100px]"
+            className="mr-3 min-w-[80px]"
             checkedChildren="有文字"
             unCheckedChildren="无文字"
             onChange={renderTextHandle}
           />
           {renderText ? (
-            <Input
-              value={text}
-              onChange={evn => {
-                textHandle(evn.target.value);
-              }}
-            ></Input>
+            <>
+              <ColorPicker
+                value={textC}
+                className="mr-2 min-w-[32px]"
+                onChange={textCHandle}
+              />
+
+              <Input
+                value={text}
+                placeholder="请输入文案"
+                onChange={evn => {
+                  textHandle(evn.target.value);
+                }}
+              />
+            </>
           ) : null}
         </div>
       </div>
@@ -195,8 +206,8 @@ const Home = () => {
         >
           {imgList.length
             ? renderArr.map((e, i) => {
-                const { file } = imgSource.current[e];
-                const src = URL.createObjectURL(file);
+                const { originFileObj } = imgList[e];
+                const src = URL.createObjectURL(originFileObj);
                 const last = renderArr.length - 1 === i;
 
                 return (
@@ -216,7 +227,15 @@ const Home = () => {
                     />
 
                     {i === textRenderIdx && text ? (
-                      <div className="absolute bottom-6 right-6 rounded-md bg-black/25 p-2 text-[20px] font-bold text-white">
+                      <div
+                        className="absolute bottom-6 right-6 text-[20px] font-bold"
+                        style={{
+                          color:
+                            typeof textC === "string"
+                              ? textC
+                              : textC.toHexString(),
+                        }}
+                      >
                         {text}
                       </div>
                     ) : null}
